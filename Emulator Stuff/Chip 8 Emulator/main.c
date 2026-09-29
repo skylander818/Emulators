@@ -4,6 +4,7 @@
 const int SCREEN_WIDTH = 64;
 const int SCREEN_HEIGHT = 32;
 
+//cd "Emulator Stuff/Chip 8 Emulator"
 void windowing();
 
 int main(int argc, char* argv[]) {
