@@ -18,6 +18,7 @@ int main(int argc, char* argv[]) {
 
 
 
+
 void windowing() {
     if (!SDL_Init(SDL_INIT_VIDEO)){
         printf("SDL_Init failed: %s\n", SDL_GetError());
