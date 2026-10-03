@@ -7,11 +7,25 @@ const int SCREEN_HEIGHT = 32;
 //cd "C:\Users\Stephen\Documents\GitHub\Emulators\Chip 8 Emulator"
 void windowing();
 
-int main(int argc, char* argv[]) {
+typedef struct{
+    uint8_t memory[4096];
+    uint8_t V[16];
+    uint16_t I;
+    uint16_t PC;
+    uint16_t stack[16];
+    uint8_t sound_timer;
+    uint8_t delay_timer;
+    uint8_t keypad[16];
+    uint8_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
+} Chip8;
+
+
+
+
+int main(int argc, char* argv[]){
     windowing();
     return 1;
 }
-
 
 
 
