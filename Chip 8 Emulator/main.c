@@ -1,11 +1,13 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <stdio.h>
+#include <SDL3/SDL_render.h>
 const int SCREEN_WIDTH = 64;
 const int SCREEN_HEIGHT = 32;
 
-//cd "C:\Users\Stephen\Documents\GitHub\Emulators\Chip 8 Emulator"
-void windowing();
+//  cd "C:\Users\Stephen\Documents\GitHub\Emulators\Chip 8 Emulator"
+
+bool SDL_start();
 
 typedef struct{
     uint8_t memory[4096];
@@ -19,12 +21,38 @@ typedef struct{
     uint8_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
 } Chip8;
 
+const uint8_t Font[80] ={
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
+bool chip_init(Chip8* chip) {
+    chip->memory[0] = 0x000;
+    chip->PC = 0x200; // Program counter starts at 0x200
+    chip->I = 0;      // Reset index register
+    chip->sound_timer = 0;
+    chip->delay_timer = 0;
 
+    return true;
+}
 
-int main(int argc, char* argv[]){
-    windowing();
-    return 1;
+int main(int argc, char *argv[]){
+
+    return SDL_start() ? 0 : 1;
 }
 
 
@@ -32,12 +60,37 @@ int main(int argc, char* argv[]){
 
 
 
-void windowing() {
-    if (!SDL_Init(SDL_INIT_VIDEO)){
+bool SDL_start() {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("SDL_Init failed: %s\n", SDL_GetError());
+        return false;
     }
+
     SDL_Window *window = SDL_CreateWindow("Chip 8 Emulator", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+    if (window == NULL) {
+        printf("SDL_CreateWindow failed: %s\n", SDL_GetError());
+        SDL_Quit();
+        return false;
+    }
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+    if (renderer == NULL) {
+        printf("SDL_CreateRenderer failed: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return false;
+    }
+
+    if (!SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255)) {
+        printf("SDL_SetRenderDrawColor failed: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return false;
+    }
+
     bool running = true;
+    bool success = true;
     SDL_Event event;
 
     while (running) {
@@ -46,5 +99,18 @@ void windowing() {
                 running = false;
             }
         }
+
+        if (!SDL_RenderClear(renderer)) {
+            printf("SDL_RenderClear failed: %s\n", SDL_GetError());
+            success = false;
+            break;
+        }
+        SDL_RenderPresent(renderer);
+        SDL_Delay(16);
     }
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return success;
 }
