@@ -3,27 +3,45 @@
 #include <SDL3/SDL_render.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 const int SCREEN_WIDTH = 64;
 const int SCREEN_HEIGHT = 32;
 
 //  cd "C:\Users\Stephen\Documents\GitHub\Emulators\Chip 8 Emulator"     // change directory to the project folder
 // C:\Users\Stephen\Documents\GitHub\Emulators\ROMs\Airplane.ch8        // location of ROM
-typedef struct Chip8 Chip8;
-bool SDL_start();
-bool chip_init(Chip8* chip, const char *rom_file_path);
 
-typedef struct Chip8 {
-    uint8_t memory[4096];
-    uint8_t V[16];
-    uint16_t I;
-    uint16_t PC;
-    uint16_t stack[16];
+
+typedef struct chip8_t chip8_t;
+bool SDL_start(chip8_t* chip);
+bool chip_init(chip8_t* chip, const char *rom_file_path);
+
+typedef struct instructions_t{
+    uint16_t opcode;
+    uint16_t NNN; // 12 bit address/counter
+    uint8_t NN; // 8 bit immediate number
+    uint8_t N; // 4 bit number
+    uint8_t X; 
+    uint8_t Y;
+} instructions_t;
+
+typedef struct chip8_t {
+    uint8_t memory[4096]; //Allocate memory
+    uint8_t V[16]; //Allocate registers
+    uint16_t I; //Allocate index register
+    uint16_t PC; //Allocate program counter
+    uint16_t stack[16]; 
     uint8_t sound_timer;
     uint8_t delay_timer;
     uint8_t keypad[16];
     uint8_t display[SCREEN_WIDTH * SCREEN_HEIGHT];
-} Chip8;
+    instructions_t instruction;
+    bool running;
+    bool isPaused;
+} chip8_t;
+
 
 
 
@@ -32,20 +50,23 @@ int main(int argc, char *argv[]){
         printf("Usage: %s <ROM file>\n", argv[0]);
         return 1;
     }
-    Chip8 chip = {0};
+    chip8_t chip = {0};
     if (!chip_init(&chip, argv[1])) {
         return 1;
     }
 
-    SDL_start();
+
+    SDL_start(&chip);
     return 0;
 }
 
 
+void emulate_instruction(chip8_t* chip) {
+    chip->instruction.opcode = (chip->memory[chip->PC] << 8) | chip->memory[chip->PC + 1];
+}
 
 
-
-bool chip_init(Chip8* chip, const char *rom_file_path) {
+bool chip_init(chip8_t* chip, const char *rom_file_path) {
     const uint8_t Font[80] ={
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
     0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -93,7 +114,7 @@ bool chip_init(Chip8* chip, const char *rom_file_path) {
 
 
 
-bool SDL_start() {
+bool SDL_start(chip8_t* chip) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         printf("SDL_Init failed: %s\n", SDL_GetError());
         return false;
@@ -114,7 +135,7 @@ bool SDL_start() {
         return false;
     }
 
-    if (!SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255)) {
+    if (!SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0)) {
         printf("SDL_SetRenderDrawColor failed: %s\n", SDL_GetError());
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -122,20 +143,42 @@ bool SDL_start() {
         return false;
     }
 
-    bool running = true;
-    bool success = true;
+    chip-> running = true;
+    chip -> isPaused = false;
     SDL_Event event;
 
-    while (running) {
+    while (chip->running) {
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) {
-                running = false;
+            switch (event.type){
+                case SDL_EVENT_QUIT:
+                chip->running = false;
+                break;
+            case SDL_EVENT_KEY_DOWN:
+                if (event.key.repeat){
+                    break;
+                }
+            switch (event.key.key){
+                case SDLK_ESCAPE:
+                    chip->running = false;
+                    break;
+                case SDLK_SPACE:
+                    printf("Emulator paused. Press 'SPACE' to resume.\n");
+                    printf("%s", chip->isPaused ? "Resuming..." : "Pausing...");
+                    chip->isPaused = !chip->isPaused;
+                    break;
             }
+            break;
+            }
+        }
+
+        if (chip->isPaused) {
+            SDL_Delay(16);
+            continue;
         }
 
         if (!SDL_RenderClear(renderer)) {
             printf("SDL_RenderClear failed: %s\n", SDL_GetError());
-            success = false;
+            chip->running = false;
             break;
         }
         SDL_RenderPresent(renderer);
@@ -145,5 +188,5 @@ bool SDL_start() {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    return success;
+    return true;
 }
